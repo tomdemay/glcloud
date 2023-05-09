@@ -1,7 +1,7 @@
 #!/bin/bash -x
 yum update  
 yum upgrade -y
-yum install weget
+yum install wget
 wget http://dev.mysql.com/get/mysql57-community-release-el7-9.noarch.rpm
 yum localinstall mysql57-community-release-el7-9.noarch.rpm -y
 yum install mysql-community-server -y --nogpgcheck
