@@ -1,5 +1,6 @@
 # PEMFiles
 pemfiles/
+*.pem
 
 # Editors
 .vscode/

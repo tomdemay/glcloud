@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash -x
 apt-get update
 apt-get upgrade -y
 apt install mysql-client-core-8.0 -y
