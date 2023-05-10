@@ -111,12 +111,12 @@ class CreateAWSResources():
         [instance.wait_for_status_ok() for instance in instances]
 
     def run():
-        vpc                             = CreateAWSResources._getVpc()
-        igw, eipalloc, keypair          = CreateAWSResources._getTopLevelObjects()
-        public_subnet, private_subnet   = CreateAWSResources._getSubnets(vpc=vpc)
-        public_rtb, private_rtb         = CreateAWSResources._getRouteTables(vpc=vpc)
-        public_sg, private_sg           = CreateAWSResources._getSecurityGroups(vpc=vpc) 
-        nat_gateway                     = CreateAWSResources._getNatGateway(vpc=vpc, igw=igw, eipalloc=eipalloc, subnet=public_subnet)
+        vpc                               = CreateAWSResources._getVpc()
+        igw, eipalloc, keypair            = CreateAWSResources._getTopLevelObjects()
+        public_subnet, private_subnet     = CreateAWSResources._getSubnets(vpc=vpc)
+        public_rtb, private_rtb           = CreateAWSResources._getRouteTables(vpc=vpc)
+        public_sg, private_sg             = CreateAWSResources._getSecurityGroups(vpc=vpc) 
+        nat_gateway                       = CreateAWSResources._getNatGateway(vpc=vpc, igw=igw, eipalloc=eipalloc, subnet=public_subnet)
         mysql_server, mattermost_server   = CreateAWSResources._getInstances(
                                             vpc=vpc, 
                                             keypair=keypair, 
