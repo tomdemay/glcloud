@@ -129,9 +129,37 @@ When starting the web application for the first time, the user must create an ad
 ## PGPCCMAR23_Thomas_DeMay_Week4-Option2.py
 This script sets up all the required AWS resources to satisfy option 2. Setting up a mattermost server. 
 
-This creates VPC, igw, elastic ip, keypair, public and private subnets, public and private routing tables, security groups, nat gateway and a configured MySQL Server on the private subnet with a Mattermost server on public subnet pointing to the MySQL host.
+This creates VPC, igw, elastic ip, keypair, public and private subnets, public and private routing tables, security groups, nat gateway and a configured MySQL Server on the private subnet with a Mattermost server on public subnet pointing to the MySQL host, using Amazon AMIs.
 
-Using Amazon AMI's
+Many of the values can be configured in config.ini or set on the command line. 
+
+```
+> python .\PGPCCMAR23_Thomas_DeMay_Week4-Option2.py --help
+usage: PGPCCMAR23_Thomas_DeMay_Week4-Option2.py [-h] [--profile PROFILE] [--region REGION] [--public-zone PUBLIC_ZONE] [--private-zone PRIVATE_ZONE] [--cleanup | --no-cleanup | -c]
+
+PGPCC | Project. Creating a secure collaboration solution using mattermost and MySQL on AWS
+
+options:
+  -h, --help            show this help message and exit
+  --profile PROFILE, -p PROFILE
+                        AWS Config profile to use. Default is 'privateaccount'
+  --region REGION, -r REGION
+                        Region to use. Default is 'us-east-1'
+  --public-zone PUBLIC_ZONE
+                        Availability zone used for the public subnet. Default is 'us-east-1a'
+  --private-zone PRIVATE_ZONE
+                        Availability zone used for the private subnet. Default is 'us-east-1b'
+  --cleanup, --no-cleanup, -c
+                        Find and delete AWS resources created by this script (default is --no-cleanup).
+
+NOTE: these arguments default values are specified in 'config.ini'
+```
+
+--- 
+
+## examples/start_instance.py
+
+Example barebones script to create a VPC with a MySQL Server on it to share with someone trying to learn AWS Python SDK. It has no dependencies on any of the other code in this project. It can stand alone. 
 
 Refer to the following URLs for how to install python and the AWS Python SDK (it's referred to as boto3). On Amazon
 https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html
@@ -139,14 +167,30 @@ https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html
 Information on how to use the SDK could be found here: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html.  Or just google boto3. There's a lot of good examples out there. It's real easy to use. 
 
 For this python script just run 
-python ./start_instance.py --help
-for more information. You can edit any of the hard coded values at the top of the program. There's no output or logging or anything. I wanted to keep it as short as possible to hopefully make it easy to read/understand.
+```python ./start_instance.py --help```
+for more information. You can edit any many of the configuration values in config.ini. There's no output or logging or anything. I wanted to keep it as short as possible to hopefully make it easy to read/understand.
 
---- 
+```
+> python .\examples\start_instance.py --help
+usage: start_instance.py [-h] [--name NAME] [--profile PROFILE] [--region REGION] [--availabilityzone AVAILABILITYZONE] [--cleanup | --no-cleanup | -c]
 
-## examples/start_instance.py
+Sample Start Instance Script
 
-Example barebones script to create a VPC with a MySQL Server on it to share with someone trying to learn AWS Python SDK
+options:
+  -h, --help            show this help message and exit
+  --name NAME, -n NAME  Name to use for the AWS resources created. (default: python test)
+  --profile PROFILE, -p PROFILE
+                        AWS Config profile to use. (default: privateaccount)
+  --region REGION, -r REGION
+                        Region to use. (default: us-east-1)
+  --availabilityzone AVAILABILITYZONE, -az AVAILABILITYZONE
+                        Availability zone used for the subnet. (default: us-east-1a)
+  --cleanup, --no-cleanup, -c
+                        Find and delete AWS resources created by this script. (default: False)
+
+Refer to the "AWS SDK for Python Quickstart Guide" for help setting up the Python SDK: https://olympus.mygreatlearning.com/courses/89450/pages/installing-python-on-windows-and-
+macos?module_item_id=3675734 or https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html
+```
 
 --- 
 
