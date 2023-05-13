@@ -33,6 +33,8 @@ from projects.week4.option2.delete_aws_resources import DeleteAWSResources
 # run script with --clean option to delete all of the above resources
 
 if __name__ == '__main__': 
-    Configuration.setup(description='PGPCC | Project. Creating a secure collaboration solution using mattermost and MySQL on AWS')
+    Configuration.setup(
+        project_name="matterMost", 
+        project_description='PGPCC | Project. Creating a secure collaboration solution using mattermost and MySQL on AWS')
     DeleteAWSResources.run() if Configuration.args.cleanup else CreateAWSResources.run()
 

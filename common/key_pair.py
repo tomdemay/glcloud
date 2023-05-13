@@ -1,6 +1,6 @@
 import logging, os
 from botocore.exceptions import ClientError
-from common.config import Configuration
+from common.session import Session
 from common.aws_resource_interface import AWSResourceInterface
 
 class KeyPair(AWSResourceInterface):
@@ -15,24 +15,26 @@ class KeyPair(AWSResourceInterface):
     def name(self: object) -> str:
         return self.keypair.key_name
     
+    @property
+    def filename(self: object) -> str:
+        return os.path.join("./pemfiles/", self.name + '.pem')
+    
     def save(self: object) -> None:
-        filename = os.path.join("./pemfiles/", self.name + '.pem')
-        logging.debug(f"Downloading keypair '{self.keypair}' to {filename}...")
-        with open(filename, 'w') as file: 
+        logging.debug(f"Downloading keypair '{self.keypair}' to {self.filename}...")
+        with open(self.filename, 'w') as file: 
             file.write(self.keypair.key_material)
-        os.chmod(filename, 0o400)
-        logging.info(f"Saved keypair '{self.keypair}' to {filename}")
+        os.chmod(self.filename, 0o400)
+        logging.info(f"Saved keypair '{self.keypair}' to {self.filename}")
 
     def wait_until_exists(self: object):
-        Configuration.session.ec2_client.get_waiter("key_pair_exists").wait(KeyPairIds=[self.keypair.key_pair_id])
+        Session.ec2_client.get_waiter("key_pair_exists").wait(KeyPairIds=[self.keypair.key_pair_id])
 
     def drop(self: object) -> None:
-        filename = os.path.join("./pemfiles/", self.name + '.pem')
-        logging.debug(f"Deleting keypair filename '{filename}'...")
-        if os.path.isfile(filename):
-            os.chmod(filename, 0o666)
-            os.remove(filename)
-        logging.info(f"Deleted keypair filename '{filename}'")
+        logging.debug(f"Deleting keypair filename '{self.filename}'...")
+        if os.path.isfile(self.filename):
+            os.chmod(self.filename, 0o666)
+            os.remove(self.filename)
+        logging.info(f"Deleted keypair filename '{self.filename}'")
         logging.debug(f"Deleting keypair '{self.keypair}'...")
         self.keypair.delete()
         logging.info(f"Deleted keypair '{self.keypair}'")
@@ -43,7 +45,7 @@ class KeyPairs:
         if keypair: return keypair
 
         logging.debug(f"Creating keypair '{name}'...")
-        ec2_keypair = Configuration.session.ec2_resource.create_key_pair(
+        ec2_keypair = Session.ec2_resource.create_key_pair(
             KeyName=name, 
             KeyFormat='pem'
         )
@@ -55,7 +57,7 @@ class KeyPairs:
     def findKeyPair(name: str):
         keypair = None
         try:
-            keypairs = list(Configuration.session.ec2_resource.key_pairs.filter(
+            keypairs = list(Session.ec2_resource.key_pairs.filter(
                 KeyNames=[name]
             ))
             if len(keypairs) == 0: raise IndexError(f"Unable to find keypair '{name}'")

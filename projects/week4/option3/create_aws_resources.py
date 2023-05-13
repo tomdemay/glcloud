@@ -12,7 +12,7 @@ from common.instance import Instance
 
 class CreateAWSResources():
     def _getVpc() -> Vpc:
-        vpc = Vpcs.getVpc(name="owncloud-vpc", cidr_block=Configuration.vpc_cidr_block)
+        vpc = Vpcs.getVpc(name="owncloud-vpc", cidr_block='10.0.0.0/16')
         vpc.wait_until_exists()
         vpc.wait_until_available()
         vpc.enableDnsSupport = True
@@ -23,18 +23,18 @@ class CreateAWSResources():
         return \
             InternetGateways.getInternetGateway(name='owncloud-igw'), \
             VpcAddresses.allocateAddress(name="owncloud-eipalloc"), \
-            KeyPairs.getKeyPair(name=Configuration.connectivity_keypair_name)
+            KeyPairs.getKeyPair(name='glkey')
 
     def _getSubnets(vpc: Vpc):
         return \
             vpc.getSubnet(
                 name                ='public-owncloud-subnet', 
-                cidr_block          =Configuration.public_subnet_cidr_blck, 
-                availability_zone   =Configuration.public_subnet_availability_zone), \
+                cidr_block          ='10.0.1.0/24', 
+                availability_zone   =Configuration.region_name + "a"), \
             vpc.getSubnet(
                 name                ='private-mysql-subnet', 
-                cidr_block          =Configuration.private_subnet_cidr_blck, 
-                availability_zone   =Configuration.private_subnet_availability_zone)
+                cidr_block          ='10.0.2.0/24', 
+                availability_zone   =Configuration.region_name + "b")
 
     def _getRouteTables(vpc: Vpc):
         return \
@@ -58,29 +58,29 @@ class CreateAWSResources():
         private_subnet.wait_until_available()
         private_sg.wait_until_exists()
         mysql_server        = vpc.runInstance(
-                name                    ='mysql-server', 
-                keypair                 =keypair, 
-                subnet                  =private_subnet, 
-                sg                      =private_sg, 
-                ebs_volume_size         =Configuration.mySQLInstance_ebs_volume_size, 
-                root_volume_device_name =Configuration.instances_root_volume_device_name, 
-                ami_id                  ='ami-0aa2b7722dc1b5612',           # hard coding as Ubuntu is required for this
-                type                    =Configuration.instances_type,
-                bootstrap_file          ='./bootstrap/owncloud-mysql-server.sh')
+                name                    = 'mysql-server', 
+                keypair                 = keypair, 
+                subnet                  = private_subnet, 
+                sg                      = private_sg, 
+                ami_id                  = Configuration.ownCloud_ami_id, 
+                root_volume_device_name = Configuration.ownCloud_root_volume_device_name,
+                type                    = Configuration.ownCloud_instance_type, 
+                ebs_volume_size         = Configuration.ownCloud_ebs_volume_size, 
+                bootstrap_file          = './bootstrap/owncloud-mysql-server.sh')
 
         public_subnet.wait_until_available()
         public_subnet.map_public_ip_on_launch = True
         public_sg.wait_until_exists()
         owncloud_server     = vpc.runInstance(
-                name                    ='owncloud-server', 
-                keypair                 =keypair, 
-                subnet                  =public_subnet, 
-                sg                      =public_sg, 
-                ebs_volume_size         =Configuration.ownCloudInstance_ebs_volume_size,
-                root_volume_device_name =Configuration.instances_root_volume_device_name, 
-                ami_id                  ='ami-0aa2b7722dc1b5612',           # hard coding as Ubuntu is required for this
-                type                    =Configuration.instances_type,
-                bootstrap_file          ='./bootstrap/owncloud-server.sh')
+                name                    = 'owncloud-server', 
+                keypair                 = keypair, 
+                subnet                  = public_subnet, 
+                sg                      = public_sg, 
+                ami_id                  = Configuration.ownCloud_ami_id, 
+                root_volume_device_name = Configuration.ownCloud_root_volume_device_name, 
+                type                    = Configuration.ownCloud_instance_type,
+                ebs_volume_size         = Configuration.ownCloud_ebs_volume_size,
+                bootstrap_file          = './bootstrap/owncloud-server.sh')
         
         return mysql_server, owncloud_server
     
@@ -96,8 +96,8 @@ class CreateAWSResources():
         public_sg.authorizeIngress(from_port=22, protocol='tcp', cidr_block='0.0.0.0/0', name='open-ssh-public', description='Opening SSH from the internet', to_port=22)
         public_sg.authorizeIngress(from_port=80, protocol='tcp', cidr_block='0.0.0.0/0', name='open-http-public', description='Opening HTTP from the internet', to_port=80)
         public_sg.authorizeIngress(from_port=443, protocol='tcp', cidr_block='0.0.0.0/0', name='open-https-public', description='Opening HTTPS from the internet', to_port=443)
-        private_sg.authorizeIngress(from_port=22, protocol='tcp', cidr_block=Configuration.public_subnet_cidr_blck, name='open-ssh-private', description='Opening SSH from the public subnet', to_port=22)
-        private_sg.authorizeIngress(from_port=3306, protocol='tcp', cidr_block=Configuration.public_subnet_cidr_blck, name='open-mysql-private', description='Opening MySQL from the public subnet', to_port=3306)
+        private_sg.authorizeIngress(from_port=22, protocol='tcp', cidr_block='10.0.1.0/24', name='open-ssh-private', description='Opening SSH from the public subnet', to_port=22)
+        private_sg.authorizeIngress(from_port=3306, protocol='tcp', cidr_block='10.0.1.0/24', name='open-mysql-private', description='Opening MySQL from the public subnet', to_port=3306)
         public_rtb.addIgwRoute(igw, '0.0.0.0/0')
         public_rtb.associate_with_subnet(public_subnet)
         private_rtb.addNatRoute(nat_gateway, '0.0.0.0/0')

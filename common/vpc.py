@@ -1,6 +1,8 @@
-import logging
+import logging, os
 from botocore.exceptions import ClientError
+from common.session import Session
 from common.config import Configuration
+from common.key_pair import KeyPair
 from common.aws_resource_interface import AWSResourceInterface
 from common.subnet import Subnet
 from common.route_table import RouteTable
@@ -24,7 +26,7 @@ class Vpc(AWSResourceInterface):
         if self.enableDnsSupport != value:
             self.vpc.modify_attribute(EnableDnsSupport = {'Value': value})
             # refresh self
-            vpcs = list(Configuration.session.ec2_resource.vpcs.filter(VpcIds = [self.vpc.id]))[0]
+            vpcs = list(Session.ec2_resource.vpcs.filter(VpcIds = [self.vpc.id]))[0]
 
     @property
     def enableDnsHostnames(self: object) -> bool:
@@ -35,7 +37,7 @@ class Vpc(AWSResourceInterface):
         if self.enableDnsHostnames != value:
             self.vpc.modify_attribute(EnableDnsHostnames = {'Value': value})
             # refresh self
-            vpcs = list(Configuration.session.ec2_resource.vpcs.filter(VpcIds = [self.vpc.id]))[0]
+            vpcs = list(Session.ec2_resource.vpcs.filter(VpcIds = [self.vpc.id]))[0]
 
     def wait_until_exists(self: object):
         self.vpc.wait_until_exists()
@@ -43,7 +45,7 @@ class Vpc(AWSResourceInterface):
     def wait_until_available(self: object):
         self.vpc.wait_until_available()
 
-    def getSubnet(self: object, name: str, cidr_block: str, availability_zone: str) -> object:
+    def getSubnet(self: object, name: str, cidr_block: str, availability_zone: str = None) -> Subnet:
         subnet = self.findSubnet(name=name)
         if subnet: return subnet
 
@@ -55,18 +57,18 @@ class Vpc(AWSResourceInterface):
                     {'Key': 'Name', 'Value': name}
                 ]
             }], 
-            AvailabilityZone=availability_zone,
+            AvailabilityZone=availability_zone if availability_zone else Configuration.region_name + "a",
             CidrBlock=cidr_block
         )
         logging.info(f"Created subnet '{name}': {ec2_subnet}")
         return Subnet(subnet=ec2_subnet) if ec2_subnet else None
     
-    def getRouteTable(self: object, name: str = None) -> object:
+    def getRouteTable(self: object, name: str = None) -> RouteTable:
         rtb = self.findRouteTable(name)
         if rtb: return rtb
 
         logging.debug(f"Creating route table '{name}'...")
-        ec2_rtb = Configuration.session.ec2_resource.create_route_table(
+        ec2_rtb = Session.ec2_resource.create_route_table(
             VpcId=self.vpc.id, 
             TagSpecifications=[{
                 'ResourceType': 'route-table',
@@ -78,13 +80,13 @@ class Vpc(AWSResourceInterface):
         logging.info(f"Created route table '{name}': {ec2_rtb}")
         return RouteTable(rtb=ec2_rtb) if ec2_rtb else None
         
-    def getSecurityGroup(self: object, name: str, description: str) -> object:
+    def getSecurityGroup(self: object, name: str, description: str = None) -> SecurityGroup:
         sg = self.findSecurityGroup(name)
         if sg: return sg
 
         logging.debug(f"Creating security group '{name}'...")
-        ec2_sg = Configuration.session.ec2_resource.create_security_group(
-            Description = description, 
+        ec2_sg = Session.ec2_resource.create_security_group(
+            Description = description if description else name, 
             GroupName   = name, 
             VpcId       = self.vpc.id, 
             TagSpecifications =[{
@@ -98,7 +100,7 @@ class Vpc(AWSResourceInterface):
         return SecurityGroup(sg=ec2_sg) if ec2_sg else None
 
     @property 
-    def subnets(self: object) -> list :
+    def subnets(self: object) -> list[Subnet] :
         subnets = []
         try:
             ec2_subnets = list(self.vpc.subnets.all())
@@ -110,7 +112,7 @@ class Vpc(AWSResourceInterface):
             logging.info(f"Subnets for '{self.vpc.id}' not found")
         return subnets
 
-    def findSubnet(self: object, name: str) -> object :
+    def findSubnet(self: object, name: str) -> Subnet :
         subnet = None
         try:
             subnets = list(self.vpc.subnets.filter(
@@ -128,10 +130,10 @@ class Vpc(AWSResourceInterface):
             logging.info(f"Subnet '{name}' not found")
         return Subnet(subnet=subnet) if subnet else None
     
-    def findRouteTable(self: object, name: str = None) -> object:
+    def findRouteTable(self: object, name: str = None) -> RouteTable:
         rtb = None
         if name == None:
-            rtbs = list(Configuration.session.ec2_resource.route_tables.filter(
+            rtbs = list(Session.ec2_resource.route_tables.filter(
                 Filters = [
                     {'Name': 'association.main', 'Values': ['true']}, 
                     {'Name': 'vpc-id',   'Values': [ self.vpc.id ]}
@@ -143,7 +145,7 @@ class Vpc(AWSResourceInterface):
             return RouteTable(rtb=rtb)
 
         try:
-            rtbs = list(Configuration.session.ec2_resource.route_tables.filter(
+            rtbs = list(Session.ec2_resource.route_tables.filter(
                 Filters = [
                     {'Name': 'tag:Name', 'Values': [ name ]}, 
                     {'Name': 'vpc-id',   'Values': [ self.vpc.id ]}
@@ -158,10 +160,10 @@ class Vpc(AWSResourceInterface):
             logging.debug(f"Route table '{name}' not found")
         return RouteTable(rtb=rtb) if rtb else None
 
-    def findSecurityGroup(self: object, name: str) -> object:
+    def findSecurityGroup(self: object, name: str) -> SecurityGroup:
         sg = None
         try:
-            sgs = list(Configuration.session.ec2_resource.security_groups.filter( 
+            sgs = list(Session.ec2_resource.security_groups.filter( 
                 Filters = [
                     {'Name': 'tag:Name',   'Values': [ name ]   }, 
                     {'Name': 'group-name', 'Values': [ name ]   }, 
@@ -177,10 +179,10 @@ class Vpc(AWSResourceInterface):
             logging.info(f"Security group '{name}' not found")
         return SecurityGroup(sg=sg) if sg else None
 
-    def findInstance(self: object, name: str) -> object:
+    def findInstance(self: object, name: str) -> Instance:
         instance = None
         try:
-            instances = list(Configuration.session.ec2_resource.instances.filter(
+            instances = list(Session.ec2_resource.instances.filter(
                 Filters = [
                     {'Name': 'tag:Name',   'Values': [ name ]   }, 
                     {'Name': 'vpc-id',     'Values': [ self.vpc.id ] }
@@ -198,36 +200,31 @@ class Vpc(AWSResourceInterface):
     def runInstance(
             self:                       object, 
             name:                       str, 
-            keypair:                    object, 
-            subnet:                     object, 
-            sg:                         object, 
-            ebs_volume_size:            int = None,
-            root_volume_device_name:    str = None,
+            keypair:                    KeyPair, 
+            subnet:                     Subnet, 
+            sg:                         SecurityGroup, 
             ami_id:                     str = None, 
-            type:                       str = None,
+            root_volume_device_name:    str = None,
+            instance_type:              str = None,
+            ebs_volume_size:            int = None,
             bootstrap_file:             str = None, 
-            bootstrap_str:              str = None) -> object:
+            bootstrap_str:              str = None) -> Instance:
         instance = self.findInstance(name)
         if instance: return instance
         logging.info(f"Creating ec2 instance '{name}' (this might take a few minutes)...")
         
-        if bootstrap_file != None and bootstrap_str != None:                raise ValueError("bootstrap_file and bootstrap_str arguments were both provided. Only one should be provided")
-        if ami_id == None:                                                  ami_id                  = Configuration.instances_ami_id
-        if type == None:                                                    type                    = Configuration.instances_type
-        if ebs_volume_size != None and root_volume_device_name == None:     root_volume_device_name = Configuration.instances_root_volume_device_name
-        if root_volume_device_name != None and ebs_volume_size == None:     ebs_volume_size         = Configuration.instances_default_volume_size
-
+        if bootstrap_file != None and bootstrap_str != None:
+            raise ValueError("bootstrap_file and bootstrap_str arguments were both provided. Only one should be provided")
+        
         userdata = ''
         if bootstrap_file: 
             with open(bootstrap_file) as f: userdata = f.read()
         elif bootstrap_str:
             userdata = bootstrap_str
 
-        print("Userdata: " + userdata)
-
-        ec2_instances = Configuration.session.ec2_client.run_instances(
-            ImageId             = ami_id,
-            InstanceType        = type, 
+        ec2_instances = Session.ec2_client.run_instances(
+            ImageId             = ami_id if ami_id else Configuration.default_ami_id,
+            InstanceType        = instance_type if instance_type else Configuration.default_instance_type, 
             KeyName             = keypair.name,
             MaxCount            = 1,
             MinCount            = 1,
@@ -235,13 +232,13 @@ class Vpc(AWSResourceInterface):
             SecurityGroupIds    = [ sg.id ], 
             SubnetId            = subnet.id, 
             BlockDeviceMappings = [{
-                'DeviceName':               root_volume_device_name, 
+                'DeviceName':               root_volume_device_name if root_volume_device_name else Configuration.default_root_volume_device_name, 
                 'Ebs': {
                     "DeleteOnTermination":  True,
-                    'VolumeSize':           ebs_volume_size,
+                    'VolumeSize':           ebs_volume_size if ebs_volume_size else Configuration.default_ebs_volume_size,
                     'VolumeType':           'gp3'
                 }
-            }] if ebs_volume_size and root_volume_device_name else [], 
+            }], 
             TagSpecifications   =[{
                 'ResourceType': 'instance',
                 'Tags'        : [
@@ -251,7 +248,7 @@ class Vpc(AWSResourceInterface):
         )['Instances']
 
         if len(ec2_instances) != 1: raise RuntimeError(f'Unexpected results. Expected to create 1 ec2 instance, but got {len(ec2_instances)}')
-        ec2_instance = Configuration.session.ec2_resource.Instance(ec2_instances[0]['InstanceId'])
+        ec2_instance = Session.ec2_resource.Instance(ec2_instances[0]['InstanceId'])
         logging.info(f"Created ec2 instance '{name}': {ec2_instance}")
         return Instance(instance=ec2_instance) if ec2_instance else None
 
@@ -263,12 +260,12 @@ class Vpc(AWSResourceInterface):
 
 
 class Vpcs:
-    def getVpc(name: str, cidr_block: str) -> object:
+    def getVpc(name: str, cidr_block: str) -> Vpc:
         vpc = Vpcs.findVpc(name)
         if vpc: return vpc
 
         logging.debug(f"Creating VPC '{name}'...")
-        ec2_vpc = Configuration.session.ec2_resource.create_vpc(
+        ec2_vpc = Session.ec2_resource.create_vpc(
             CidrBlock         =cidr_block,
             TagSpecifications =[{
                 'ResourceType': 'vpc',
@@ -280,13 +277,13 @@ class Vpcs:
         logging.info(f"Created VPC '{name}': {ec2_vpc}")
         return Vpc(vpc=ec2_vpc) if ec2_vpc else None
 
-    def findVpc(name: str = None) -> object:
+    def findVpc(name: str = None) -> Vpc:
         vpc = None
         try:
             filters = [{'Name': 'tag:Name', 'Values': [ name ]}] \
                 if name \
                 else [{'Name': 'is-default', 'Values': [ 'true' ]}]
-            vpcs = list(Configuration.session.ec2_resource.vpcs.filter(Filters=filters))
+            vpcs = list(Session.ec2_resource.vpcs.filter(Filters=filters))
             if (len(vpcs) == 0): raise IndexError(f"Unable to find vpc '{name if name else 'default vpc'}'")
             # intentionally not caught
             elif (len(vpcs) != 1): raise RuntimeError(f'Unexpected results. Expected 1 vpc, but got {len(vpcs)}')

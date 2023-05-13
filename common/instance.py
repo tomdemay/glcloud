@@ -1,5 +1,5 @@
 import logging
-from common.config import Configuration
+from common.session import Session
 from common.aws_resource_interface import AWSResourceInterface
 
 class Instance(AWSResourceInterface):
@@ -25,12 +25,12 @@ class Instance(AWSResourceInterface):
 
     def wait_for_status_ok(self: object) -> None:
         logging.info(f"Waiting for status okay for instance '{self.instance}' (this might take a few minutes)...")
-        Configuration.session.ec2_client.get_waiter("instance_status_ok").wait(InstanceIds=[self.id])
+        Session.ec2_client.get_waiter("instance_status_ok").wait(InstanceIds=[self.id])
         logging.info(f"Received okay status for instance '{self.instance}'")
 
     def wait_for_termination(self: object) -> None:    
         logging.info(f"Waiting for instance '{self.instance}' to terminate (this might take a few minutes)...")
-        Configuration.session.ec2_client.get_waiter("instance_terminated").wait(InstanceIds=[self.id])
+        Session.ec2_client.get_waiter("instance_terminated").wait(InstanceIds=[self.id])
         logging.info(f"Instance '{self.instance}' has been terminated")
 
     def drop(self: object):

@@ -1,4 +1,3 @@
-from common.config import Configuration
 from common.vpc import Vpcs
 from common.internet_gateway import InternetGateways
 from common.vpc_address import VpcAddresses
@@ -8,7 +7,7 @@ from common.key_pair import KeyPairs
 class DeleteAWSResources():
     def run():
         cleanup_stack = [
-            (KeyPairs.findKeyPair(name=Configuration.connectivity_keypair_name), lambda res: res.drop())
+            (KeyPairs.findKeyPair(name="glkey"), lambda res: res.drop())
         ]
         vpcf                    = (Vpcs.findVpc(name="owncloud-vpc"),            lambda res: res.drop())
         if vpcf[0]:

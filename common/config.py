@@ -1,50 +1,59 @@
 import argparse, logging, logging.config, json, os, configparser
-from common.session import Session
 from common.utils import classproperty
+from common.session import Session
 
-class classproperty(property):
-    def __get__(self, cls, owner):
-        return classmethod(self.fget).__get__(None, owner)()
-    
 class Configuration:
     args = None
+    _project_name = None
     _config = None
     _profile_name = None
     _region_name = None
     _setup_already = False
-    _session = None
-    _public_availability_zone = None
-    _private_availability_zone = None
+    _parser = None
 
     def reloadconfig(): 
         Configuration._config = configparser.ConfigParser(inline_comment_prefixes="#;")
         Configuration._config.read(filenames='config.ini')
 
-    def setup(description: str):
-        if Configuration._setup_already: return
+    def getArgParser(project_description: str) -> argparse.ArgumentParser:
+        if Configuration._parser != None: return Configuration._parser
 
+        Configuration._parser = argparse.ArgumentParser(
+            description=project_description, 
+            epilog="NOTE: these default values are specified in 'config.ini'", 
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
         Configuration.reloadconfig()
-        default_profile_name                = Configuration._config.get('AWSCli', 'default.profile.name')
-        default_region_name                 = Configuration._config.get('AWSCli','default.region.name')
-        default_public_availability_zone    = Configuration._config.get('PublicSubnet','availability.zone')
-        default_private_availability_zone   = Configuration._config.get('PrivateSubnet','availability.zone')
+        default_profile_name    = Configuration._config.get('AWSCli', 'default.profile.name')
+        default_region_name     = Configuration._config.get('AWSCli','default.region.name')
+        Configuration._parser.add_argument('--profile-name', '-pn', help=f"AWS Config profile to use.", default=default_profile_name, required=False, type=str)
+        Configuration._parser.add_argument('--region-name', '-rn', help=f"Region to use.", default=default_region_name, required=False, type=str)
+        return Configuration._parser
+    
+    def getCmdLineArgs(project_description: str) -> object:
+        if Configuration.args: return Configuration.args
 
-        parser = argparse.ArgumentParser(description=description, epilog="NOTE: these arguments default values are specified in 'config.ini'")
-        parser.add_argument('--profile', '-p', help=f"AWS Config profile to use. Default is '{default_profile_name}'", default=default_profile_name, required=False, type=str)
-        parser.add_argument('--region', '-r', help=f"Region to use. Default is '{default_region_name}'", default=default_region_name, required=False, type=str)
-        parser.add_argument('--public-zone', help=f"Availability zone used for the public subnet. Default is '{default_public_availability_zone}'", default=default_public_availability_zone, required=False, type=str)
-        parser.add_argument('--private-zone', help=f"Availability zone used for the private subnet. Default is '{default_private_availability_zone}'", default=default_private_availability_zone, required=False, type=str)
-        parser.add_argument('--cleanup', '-c', help=f"Find and delete AWS resources created by this script (default is --no-cleanup).", action=argparse.BooleanOptionalAction, default=False)
-        Configuration.args = parser.parse_args()
-        Configuration._profile_name = Configuration.args.profile
-        Configuration._region_name = Configuration.args.region
+        Configuration.getArgParser(project_description=project_description)
+        Configuration._parser.add_argument('--cleanup', '-c', help=f"Find and delete AWS resources created by this script.", action=argparse.BooleanOptionalAction, default=False)
+        Configuration.args = Configuration._parser.parse_args()
+        return Configuration.args
+        
+    def setup(project_name: str, project_description: str):
+        if Configuration._setup_already: return
+        
+        Configuration._project_name = project_name
+        Configuration.getCmdLineArgs(project_description)
+
+        Configuration._profile_name = Configuration.args.profile_name
+        Configuration._region_name = Configuration.args.region_name
         
         if os.path.exists('logging.json'):
             with open('logging.json', "rt") as f:
                 config = json.load(f)
             logging.config.dictConfig(config)
 
-        logheader = f"\n\n{description}\n"
+        logheader = f"\n\nProject Name: {project_name}"
+        logheader += f"\n\nProject Description: {project_description}\n"
         logheader += "\n\t* Using the following configurations from command line arguments (default values are set in config.ini file):\n"
         for key, value in vars(Configuration.args).items():
             logheader += (f"\t\t** {key:27}: {value}\n")
@@ -55,66 +64,65 @@ class Configuration:
                 logheader += (f"\t\t***  {key:25}: {value}\n")
         logheader += ("\t**")
         logging.info(logheader)
-
-        Configuration._session = Session(profile_name=Configuration.profile_name, region_name=Configuration.region_name)
+        Session.connect(Configuration._profile_name, Configuration._region_name)
         Configuration._setup_already = True
 
     @classproperty
-    def session(cls):
-        return cls._session
-
+    def project_name(cls) -> str:
+        return cls._project_name
+    
     @classproperty
-    def profile_name(cls):
+    def profile_name(cls) -> str:
         return cls._profile_name
     
     @classproperty
-    def region_name(cls):
+    def region_name(cls) -> str:
         return cls._region_name
     
     @classproperty
-    def instances_ami_id(cls):
-        return cls._config.get('Instances', 'ami_id')
+    def default_ami_id(cls) -> str:
+        return cls._config.get('Default', 'ami_id')
 
     @classproperty
-    def instances_type(cls):
-        return cls._config.get('Instances', 'type')
-    
-    @classproperty
-    def instances_root_volume_device_name(cls):
-        return cls._config.get('Instances', 'root.volume.device.name')
+    def default_root_volume_device_name(cls) -> str:
+        return cls._config.get('Default', 'root.volume.device.name')
 
     @classproperty
-    def instances_default_volume_size(cls):
-        return cls._config.get('Instances', 'default.volume.size')
-
-    @classproperty 
-    def connectivity_keypair_name(cls):
-        return cls._config.get('Connectivity', 'keypair.name')
-
-    @classproperty
-    def vpc_cidr_block(cls):
-        return cls._config.get('VPC', 'cidr.block')
+    def default_instance_type(cls) -> str:
+        return cls._config.get('Default', 'instance.type')
     
     @classproperty
-    def public_subnet_availability_zone(cls):
-        return cls._config.get('PublicSubnet', 'availability.zone')
-    
-    @classproperty
-    def public_subnet_cidr_blck(cls):
-        return cls._config.get('PublicSubnet', 'cidr.block')
-    
-    @classproperty
-    def private_subnet_availability_zone(cls):
-        return cls._config.get('PrivateSubnet', 'availability.zone')
-    
-    @classproperty
-    def private_subnet_cidr_blck(cls):
-        return cls._config.get('PrivateSubnet', 'cidr.block')
-    
-    @classproperty
-    def ownCloudInstance_ebs_volume_size(cls):
-        return cls._config.getint('ownCloudInstance', 'ebs.volume.size')
+    def default_ebs_volume_size(cls) -> int:
+        return cls._config.getint('Default', 'default.ebs.volume.size')
 
     @classproperty
-    def mySQLInstance_ebs_volume_size(cls):
-        return cls._config.getint('mySQLInstance', 'ebs.volume.size')
+    def ownCloud_ami_id(cls) -> str:
+        return cls._config.get('ownCloud', 'ami_id')
+
+    @classproperty
+    def ownCloud_root_volume_device_name(cls) -> str:
+        return cls._config.get('ownCloud', 'root.volume.device.name')
+
+    @classproperty
+    def ownCloud_instance_type(cls) -> str:
+        return cls._config.get('ownCloud', 'instance.type')
+
+    @classproperty
+    def ownCloud_ebs_volume_size(cls) -> int:
+        return cls._config.getint('ownCloud', 'ebs.volume.size')
+
+    @classproperty
+    def matterMost_ami_id(cls) -> str:
+        return cls._config.get('matterMost', 'ami_id')
+
+    @classproperty
+    def matterMost_root_volume_device_name(cls) -> str:
+        return cls._config.get('matterMost', 'root.volume.device.name')
+
+    @classproperty
+    def matterMost_instance_type(cls) -> str:
+        return cls._config.get('matterMost', 'instance.type')
+
+    @classproperty
+    def matterMost_ebs_volume_size(cls) -> str:
+        return cls._config.getint('matterMost', 'ebs.volume.size')

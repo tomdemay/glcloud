@@ -1,6 +1,6 @@
 import logging
 from botocore.exceptions import ClientError
-from common.config import Configuration
+from common.session import Session
 from common.aws_resource_interface import AWSResourceInterface
 
 class SecurityGroup(AWSResourceInterface):
@@ -44,7 +44,7 @@ class SecurityGroup(AWSResourceInterface):
             logging.info(f"Security Group Ingress rule '{description}' has been authorized")
 
     def wait_until_exists(self: object) -> None:
-        Configuration.session.ec2_client.get_waiter("security_group_exists").wait(GroupIds=[self.sg.id])
+        Session.ec2_client.get_waiter("security_group_exists").wait(GroupIds=[self.sg.id])
 
     def drop(self: object) -> None:
         logging.debug(f"Deleting security group '{self.sg}'...")

@@ -1,6 +1,6 @@
 import logging
 from botocore.exceptions import ClientError
-from common.config import Configuration
+from common.session import Session
 from common.aws_resource_interface import AWSResourceInterface
 
 class VpcAddress(AWSResourceInterface):
@@ -20,7 +20,7 @@ class VpcAddresses:
     def findAllocatedAddress(name: str) -> object:
         eipalloc = None
         try:
-            eipallocs = list(Configuration.session.ec2_resource.vpc_addresses.filter(
+            eipallocs = list(Session.ec2_resource.vpc_addresses.filter(
                 Filters=[
                     {'Name': 'tag:Name', 'Values': [ name ] }
                 ]
@@ -39,7 +39,7 @@ class VpcAddresses:
         if eipalloc: return eipalloc
 
         logging.debug(f"Allocating elastic ip '{name}'...")
-        eipalloc_id = Configuration.session.ec2_client.allocate_address(
+        eipalloc_id = Session.ec2_client.allocate_address(
             Domain='vpc',
             TagSpecifications=[{
                 'ResourceType': 'elastic-ip',
@@ -48,6 +48,6 @@ class VpcAddresses:
                 ]
             }], 
         )['AllocationId']
-        ec2_eipalloc = Configuration.session.ec2_resource.VpcAddress(eipalloc_id)
+        ec2_eipalloc = Session.ec2_resource.VpcAddress(eipalloc_id)
         logging.info(f"Created elastic ip '{name}': {ec2_eipalloc}")
         return VpcAddress(eipalloc=ec2_eipalloc) if ec2_eipalloc else None

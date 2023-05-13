@@ -1,6 +1,6 @@
 import logging
 from botocore.exceptions import ClientError
-from common.config import Configuration
+from common.session import Session
 from common.aws_resource_interface import AWSResourceInterface
 
 class NatGateway(AWSResourceInterface):
@@ -13,24 +13,24 @@ class NatGateway(AWSResourceInterface):
     
     def wait_until_available(self: object):
         logging.info(f"Waiting for NAT Gateway '{self.nat_id}' to be available (this might take a few minutes)...")
-        Configuration.session.ec2_client.get_waiter("nat_gateway_available").wait(NatGatewayIds=[self.nat_id])
+        Session.ec2_client.get_waiter("nat_gateway_available").wait(NatGatewayIds=[self.nat_id])
         logging.info(f"NAT Gateway '{self.nat_id}' is available")
 
     def wait_until_deleted(self: object) -> None:
         logging.info(f"Waiting for NAT Gateway '{self.nat_id}' to deleted (this might take a few minutes)...")
-        Configuration.session.ec2_client.get_waiter("nat_gateway_deleted").wait(NatGatewayIds=[self.nat_id])
+        Session.ec2_client.get_waiter("nat_gateway_deleted").wait(NatGatewayIds=[self.nat_id])
         logging.info(f"NAT Gateway '{self.nat_id}' has been deleted")
 
     def drop(self: object) -> None:
         logging.info(f"Deleting NAT Gateway '{self.nat_id}'")
-        Configuration.session.ec2_client.delete_nat_gateway(NatGatewayId = self.nat_id)
+        Session.ec2_client.delete_nat_gateway(NatGatewayId = self.nat_id)
         logging.info(f"Deleted NAT Gateway '{self.nat_id}'")
 
 class NatGateways:
     def findNatGateway(name: str) -> object:
         nat_id = None
         try:
-            nats = Configuration.session.ec2_client.describe_nat_gateways(
+            nats = Session.ec2_client.describe_nat_gateways(
                 Filters=[
                     {'Name': 'tag:Name', 'Values': [ name ] },
                     {'Name': 'state',    'Values': [ 'pending', 'available' ]}
@@ -51,7 +51,7 @@ class NatGateways:
 
         nat_id = None
         logging.info(f"Creating NAT gateway '{name}'")
-        nat_id = Configuration.session.ec2_client.create_nat_gateway(
+        nat_id = Session.ec2_client.create_nat_gateway(
             AllocationId = eipalloc.id, 
             SubnetId = subnet.id, 
             TagSpecifications = [{

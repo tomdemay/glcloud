@@ -33,6 +33,8 @@ from projects.week4.option3.delete_aws_resources import DeleteAWSResources
 
 
 if __name__ == '__main__': 
-    Configuration.setup(description='PGPCC | Project. Creating a file share & sync solution using ownCloud and AWS')
+    Configuration.setup(
+        project_name="ownCloud", 
+        project_description='PGPCC | Project. Creating a file share & sync solution using ownCloud and AWS')
     DeleteAWSResources.run() if Configuration.args.cleanup else CreateAWSResources.run()
 
