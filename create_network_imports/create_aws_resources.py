@@ -44,12 +44,18 @@ class CreateAWSResources():
     def _getInstance(vpc: Vpc, subnet: Subnet, sg: SecurityGroup) -> Instance:
         keypair = KeyPairs.getKeyPair(name=Configuration.project_name.lower().replace(' ', '-'))
         keypair.wait_until_exists()
+        bootstrap_string = None
+        if Configuration.args.aws_access_key_id and Configuration.args.aws_secret_access_key and Configuration.args.bootstrap_script:
+            with open(Configuration.args.bootstrap_script) as f:
+                bootstrap_string = f.read().format(Configuration.args.aws_access_key_id, Configuration.args.aws_secret_access_key)
+
         instance = vpc.runInstance(
             name            = f"{Configuration.project_name} instance", 
             keypair         = keypair, 
             subnet          = subnet, 
             sg              = sg, 
-            bootstrap_file  = Configuration.args.bootstrap_script)
+            bootstrap_str   = bootstrap_string, 
+            bootstrap_file  = None if bootstrap_string else Configuration.args.bootstrap_script )
         return instance
     
     def _addRoute(vpc: Vpc) -> None:

@@ -36,7 +36,7 @@ NAT Gateway: (owncloud-nat) is created using the Elastic IP (owncloud-eipalloc) 
 The following instances are created after the NAT Gateway is available:
 
 1. EC2 Instance: mysql-server. The following are associated with this instance.
-    - `bootstrap/mysql-server.sh` script is used to bootstrap the EC2 instance to install, configure and secure MySQL. 
+    - `bootstrap/owncloud-mysql-server.sh` script is used to bootstrap the EC2 instance to install, configure and secure MySQL. 
     - The keypair `glkey`
     - Private Subnet (private-mysql-subnet)
     - Private Security Group (private-mysql-sq)
@@ -104,7 +104,8 @@ NOTE: these arguments default values are specified in 'config.ini'
 
 ### bootstrap subdirectory
 
-- `bootstrap/mysql-server.sh` script is used to bootstrap the EC2 instance to install, configure and secure MySQL. 
+- `bootstrap/owncloud-mysql-server.sh` script is used to bootstrap the EC2 instance to install, configure and secure MySQL for use wqith OwnCloud.
+    - script used by PGPCCMAR23_Thomas_DeMay_Week4-Option3.py
     - root user is limited access only from the localhost
     - anonymous users are deleted
     - test database is dropped
@@ -114,14 +115,46 @@ NOTE: these arguments default values are specified in 'config.ini'
     - MySQL is configured to allow traffic from anywhere. In production this can be improved to allow traffic only from the owncloud http server.
     - mysql_native_password is defined as the default_authentication_plugin
 - `bootstrap/owncloud-server.sh` script is used to bootstrap the EC2 instance to install and configure appache, PHP 7.1, and owncloud. 
+    - script used by `PGPCCMAR23_Thomas_DeMay_Week4-Option3.py`
     - Apache is installed
     - MySQL Client is installed to test connectivity to the MySQL server
     - PHP7.1 is installed
     - ownCloud is downloaded and installed
     - index.php is defined as a apache default home page
     - `/var/www/owncloud` as apache's document root
+    - When starting the web application for the first time, the user must create an admin user name and password and specify the database connections. In production this can be improved to be scripted in bootstrap script.
+- `bootstrap/mattermost-centos.sh`
+    - script used by `PGPCCMAR23_Thomas_DeMay_Week4-Option2.py`
+    - installs mattermost server on an EC2 instance
+    - Is a format specifier. `{0}` is used in the script to take the IP address of a mysql server
+- `bootstrap/mysql-server-centos.sh`
+    - script used by `PGPCCMAR23_Thomas_DeMay_Week4-Option2.py`
+    - installs MySQL on another EC2 instance
+    - `root` password is set to `Password42!`
+    - The IP address of this script is substituted for the `{0}` format specifier in the `bootstrap/mattermost-centos.sh` script
+- `bootstrap/appache-ubuntu.sh`
+    - Can be used by `create_newtwork.py` script to setup an EC2 instance with apache installed
+- `bootstrap/mysql-server-ubuntu.sh`
+    - Can be used by `create_network.py` script to setup an EC2 instancfe with MySQL Server installed
+    - root user's password is set to `password`
+    - anonymous users are deleted
+    - test database is dropped
+    - MySQL is configured to allow traffic from anywhere. In production this can be improved to allow traffic only from the owncloud http server.
+    - mysql_native_password is defined as the default_authentication_plugin
+- `bootstrap/docker-ubuntu.sh`
+    - Can be used by `create_network.py` script to setup an EC2 instance
+    - Installs docker
+    - Installs AWS CLI
+    - Configures AWS CLI with `aws_access_key_id` and `aws_secret_access_key` passed as command line arguments to `create_network.py`
+    - Sets up a `Dockerfile` that will create a docker image, install tomcat and pull the `HelloWorld.war` file and install it.
+    - Pushes the new `HelloWorld` docker image to AWS ECR repository `helloworld` if it exists
+- `bootstrap/docker-pull-ubuntu.sh`
+    - Can be used by `create_network.py` script to setup an EC2 instance
+    - Installs docker
+    - Installs AWS CLI
+    - Configures AWS CLI with `aws_access_key_id` and `aws_secret_access_key` passed as command line arguments to `create_network.py`
+    - Pulls the  `helloworld:latest` docker image from `helloworld` AWS ECR repository
 
-When starting the web application for the first time, the user must create an admin user name and password and specify the database connections. In production this can be improved to be scripted in bootstrap script.
 
 
 ---
@@ -154,6 +187,43 @@ options:
 
 NOTE: these arguments default values are specified in 'config.ini'
 ```
+
+---
+
+## create_network.py
+
+This script will create an instance within a VPC using an optional bootstrap script provided on the command line.
+
+If youre script include installing the AWS CLI include '{0}' in your script for the access key id and '{1}' in your script for the secret access key. Be sure to include all three (boostrap file, access key id and secret access key) on the command line
+
+
+```
+> python .\create_network.py --help
+usage: create_network.py [-h] [--profile-name PROFILE_NAME] [--region-name REGION_NAME] --name NAME [--ports PORTS [PORTS ...]] [--bootstrap-script BOOTSTRAP_SCRIPT] [--aws-access-key-id AWS_ACCESS_KEY_ID] [--aws-secret-access-key AWS_SECRET_ACCESS_KEY] [--cleanup | --no-cleanup | -c]
+
+Sample project to start an EC2 instance in a new VPC
+
+options:
+  -h, --help            show this help message and exit
+  --profile-name PROFILE_NAME, -pn PROFILE_NAME
+                        AWS Config profile to use. (default: privateaccount)
+  --region-name REGION_NAME, -rn REGION_NAME
+                        Region to use. (default: us-east-1)
+  --name NAME, -n NAME  Project Name. (default: None)
+  --ports PORTS [PORTS ...], -p PORTS [PORTS ...]
+                        List of ports to open (default: [80, 22])
+  --bootstrap-script BOOTSTRAP_SCRIPT, -bs BOOTSTRAP_SCRIPT
+                        Bootstrap script to run when instance is created. (default: None)
+  --aws-access-key-id AWS_ACCESS_KEY_ID, -k AWS_ACCESS_KEY_ID
+                        AWS Access Key ID if needed for bootstrap script. (default: None)
+  --aws-secret-access-key AWS_SECRET_ACCESS_KEY, -s AWS_SECRET_ACCESS_KEY
+                        AWS Secret Access Key if needed for bootstrap script. (default: None)
+  --cleanup, --no-cleanup, -c
+                        Find and delete AWS resources created by this script. (default: False)
+
+NOTE: these default values are specified in 'config.ini'
+```
+
 
 --- 
 

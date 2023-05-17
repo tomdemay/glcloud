@@ -13,12 +13,14 @@ if __name__ == '__main__':
     parser.add_argument('--name', '-n', help="Project Name.", required=True, type=str)
     parser.add_argument('--ports', "-p", help="List of ports to open", default=DEFAULT_PORTS, required=False, nargs="+", type=int)
     parser.add_argument('--bootstrap-script', '-bs', help='Bootstrap script to run when instance is created.', default=None, required=False, type=str)
+    parser.add_argument('--aws-access-key-id', '-k', help='AWS Access Key ID if needed for bootstrap script.', default=None, required=False, type=str)
+    parser.add_argument('--aws-secret-access-key', '-s', help='AWS Secret Access Key if needed for bootstrap script.', default=None, required=False, type=str)
 
     args = Configuration.getCmdLineArgs(project_description=project_description)
     project_name = args.name
     if args.bootstrap_script and not os.path.exists(args.bootstrap_script):
         raise FileNotFoundError(args.bootstrap_script)
-
+    
     Configuration.setup(
         project_name=project_name, 
         project_description=project_description)
