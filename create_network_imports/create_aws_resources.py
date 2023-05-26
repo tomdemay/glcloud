@@ -1,4 +1,4 @@
-import logging
+import logging, pyperclip
 from common.config import Configuration
 from common.vpc import Vpc, Vpcs
 from common.instance import Instance
@@ -73,8 +73,11 @@ class CreateAWSResources():
 
         instance.wait_for_status_ok()
 
+        pyperclip.copy(instance.public_ip_address)
+
         logging.info(f'''
 
             Instance IP Address: {instance.public_ip_address}. 
-
+            The IP address has been copied to your clipboard. 
+            
         ''')

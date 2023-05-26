@@ -12,7 +12,7 @@ mkdir .aws
 echo "[default]
 region = us-east-1
 output = json" > .aws/config
-echo "[default]
+echo '[default]
 aws_access_key_id = {0}
 aws_secret_access_key = {1} > .aws/credentials
 echo '# ---------------------------------------------------------------------------------------------
