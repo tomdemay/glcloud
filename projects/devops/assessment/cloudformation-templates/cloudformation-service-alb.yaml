@@ -1,0 +1,120 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  VpcId:
+    Type: 'AWS::EC2::VPC::Id'
+  SubnetIds:
+    Type: 'List<AWS::EC2::Subnet::Id>'
+Resources:
+  devopsAssessmentServiceSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Security group for the ECS Service
+      GroupName: devopsAssessmentServiceSecurityGroup
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+  devopsAssessmentService:
+    Type: 'AWS::ECS::Service'
+    Properties:
+      Cluster: devops-assessment-cluster
+      CapacityProviderStrategy:
+        - CapacityProvider: FARGATE
+          Base: 0
+          Weight: 1
+      TaskDefinition: devops-assessment-task
+      ServiceName: devops-assessment-service
+      SchedulingStrategy: REPLICA
+      DesiredCount: 1
+      LoadBalancers:
+        - ContainerName: devops-assessment
+          ContainerPort: 80
+          LoadBalancerName: !Ref 'AWS::NoValue'
+          TargetGroupArn: !Ref devopsAssessmentTargetGroup
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - !Ref devopsAssessmentServiceSecurityGroup
+          Subnets: !Ref SubnetIds
+      PlatformVersion: LATEST
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      DeploymentController:
+        Type: ECS
+      ServiceConnectConfiguration:
+        Enabled: false
+      EnableECSManagedTags: true
+    DependsOn:
+      - devopsAssessmentListener
+  devopsAssessmentLoadBalancer:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      Type: application
+      Name: devops-assessment-load-balancer
+      SecurityGroups:
+        - !Ref devopsAssessmentServiceSecurityGroup
+      Subnets: !Ref SubnetIds
+  devopsAssessmentTargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      HealthCheckPath: /
+      Name: devops-assessment-target-group
+      Port: 80
+      Protocol: HTTP
+      TargetType: ip
+      HealthCheckProtocol: HTTP
+      VpcId: !Ref VpcId
+  devopsAssessmentListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref devopsAssessmentTargetGroup
+      LoadBalancerArn: !Ref devopsAssessmentLoadBalancer
+      Port: 80
+      Protocol: HTTP
+  devopsAssessmentAutoScalingTarget:
+    Type: 'AWS::ApplicationAutoScaling::ScalableTarget'
+    Properties:
+      MaxCapacity: '3'
+      MinCapacity: '1'
+      ResourceId: service/devops-assessment-cluster/devops-assessment-service
+      RoleARN: >-
+        arn:aws:iam::032822161467:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService
+      ScalableDimension: 'ecs:service:DesiredCount'
+      ServiceNamespace: ecs
+    DependsOn:
+      - devopsAssessmentService
+  devopsAssessmentAutoScalingPolicy:
+    Type: 'AWS::ApplicationAutoScaling::ScalingPolicy'
+    Properties:
+      PolicyName: averageCPUUtilization
+      PolicyType: TargetTrackingScaling
+      ResourceId: service/devops-assessment-cluster/devops-assessment-service
+      ScalingTargetId: !Ref devopsAssessmentAutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        DisableScaleIn: false
+        ScaleInCooldown: '30'
+        ScaleOutCooldown: '30'
+        TargetValue: '50'
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+Outputs:
+  LoadBalancerDNSName:
+    Description: Load balancer DNSName.
+    Value: !GetAtt 
+      - devopsAssessmentLoadBalancer
+      - DNSName
+    Export:
+      Name: devopsAssessmentLoadBalancerDNSName

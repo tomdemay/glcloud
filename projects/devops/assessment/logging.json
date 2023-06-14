@@ -1,0 +1,40 @@
+{
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+        "simple": {
+            "format": "%(levelname)-8s - %(asctime)s - %(message)s"
+        }, 
+        "verbose": {
+            "format": "%(levelname)-8s - %(asctime)s - %(threadName)s(%(thread)d):  %(message)s"
+        }
+    },
+    "handlers": {
+        "stdout": {
+            "class": "logging.StreamHandler",
+            "level": "INFO",
+            "formatter": "simple",
+            "stream": "ext://sys.stdout"
+        },
+        "stderr": {
+            "class": "logging.StreamHandler",
+            "level": "ERROR",
+            "formatter": "simple",
+            "stream": "ext://sys.stderr"
+        },
+        "file": {
+            "class": "logging.FileHandler",
+            "formatter": "verbose",
+            "filename": "output.log",
+            "mode": "w"
+        }
+    },
+    "root": {
+        "level": "DEBUG",
+        "handlers": [
+            "stderr",
+            "stdout",
+            "file"
+        ]
+    }
+}

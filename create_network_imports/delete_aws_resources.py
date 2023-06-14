@@ -1,6 +1,6 @@
-from common.vpc import Vpcs
-from common.internet_gateway import InternetGateways
-from common.key_pair import KeyPairs
+from common.ec2.vpc import Vpcs
+from common.ec2.internet_gateway import InternetGateways
+from common.ec2.key_pair import KeyPairs
 
 class DeleteAWSResources():
     def run(project_name: str):

@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+  devopsAssessmentCluster:
+    Type: 'AWS::ECS::Cluster'
+    Properties:
+      ClusterName: devops-assessment-cluster
+      CapacityProviders:
+        - FARGATE
+        - FARGATE_SPOT
+      ClusterSettings:
+        - Name: containerInsights
+          Value: disabled
+      Configuration:
+        ExecuteCommandConfiguration:
+          Logging: DEFAULT
+      ServiceConnectDefaults:
+        Namespace: devops-assessment-cluster
+  devopsAssessmentTask:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Name: devops-assessment
+          Image: !Join 
+            - ''
+            - - !ImportValue devopsAssessmentRepositoryUri
+              - ':latest'
+          Cpu: '0'
+          PortMappings:
+            - Name: devops-assessment-80-tcp
+              ContainerPort: '80'
+              HostPort: '80'
+              Protocol: tcp
+              AppProtocol: http
+          Essential: 'true'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-create-group: 'true'
+              awslogs-group: /ecs/devops-assessment-task
+              awslogs-region: us-east-1
+              awslogs-stream-prefix: ecs
+      Family: devops-assessment-task
+      TaskRoleArn: 'arn:aws:iam::032822161467:role/myECSFullAccessRole'
+      ExecutionRoleArn: 'arn:aws:iam::032822161467:role/myECSFullAccessRole'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: '1024'
+      Memory: '3072'
+      RuntimePlatform:
+        CpuArchitecture: X86_64
+        OperatingSystemFamily: LINUX

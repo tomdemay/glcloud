@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC to host the application
+  SubnetId:
+    Type: String
+    Description: Enter the Subnet Id for the EC2 Instance
+  PrivateIpAddress:
+    Type: String
+    Description: Private Ip Address to assign the MySQL EC2 Instance
+  EncodedBootstrap:
+    Type: String
+    Description: Base 64 Encoded bootstrap script for the MySQL EC2 Instance
+Resources:
+  devopsAssessmentMySQLInstance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      ImageId: ami-04a0ae173da5807d3
+      InstanceType: t2.micro
+      KeyName: glkey-us-east-1
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: "0"
+          PrivateIpAddresses:
+            - PrivateIpAddress: !Ref PrivateIpAddress
+              Primary: true
+          SubnetId: !Ref SubnetId
+          GroupSet:
+            - !Ref devopsAssessmentMySQLSecurityGroup
+      Tags:
+        - Key: Name
+          Value: devopsAssessmentMySQLInstance
+      UserData: !Ref EncodedBootstrap
+  devopsAssessmentMySQLSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: Security group for the MySQL instance
+      GroupName: devopsAssessmentMySQLSecurityGroup
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+  devopsAssessmentRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Delete
+    Properties:
+      RepositoryName: devops-assessment
+      EncryptionConfiguration:
+        EncryptionType: KMS
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      ImageTagMutability: MUTABLE
+Outputs:
+  devopsAssessmentMySQLInstance:
+    Value: !Ref devopsAssessmentMySQLInstance
+    Description: The instance ID of the devopsAssessmentMySQLInstance EC2 Instance
+  devopsAssessmentMySQLInstancePublicIp:
+    Value: !GetAtt devopsAssessmentMySQLInstance.PublicIp
+    Description: Public IP Address of the devopsAssessmentMySQLInstance EC2 Instance
+  devopsAssessmentMySQLInstancePrivateIp:
+    Value: !GetAtt devopsAssessmentMySQLInstance.PrivateIp
+    Description: Private IP Address of the devopsAssessmentMySQLInstance EC2 Instance
+  devopsAssessmentRepositoryOutput:
+    Value: !Ref devopsAssessmentRepository
+    Description: devopsAssessmentRepository resource
+    Export:
+      Name: devopsAssessmentRepositoryOutput
+  devopsAssessmentRepositoryArn:
+    Value: !GetAtt devopsAssessmentRepository.Arn
+    Description: ARN of the devopsAssessmentRepository resource
+    Export:
+      Name: devopsAssessmentRepositoryArn
+  devopsAssessmentRepositoryUri:
+    Value: !GetAtt devopsAssessmentRepository.RepositoryUri
+    Description: URI of the devopsAssessmentRepository resource
+    Export:
+      Name: devopsAssessmentRepositoryUri

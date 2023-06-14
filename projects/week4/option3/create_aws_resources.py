@@ -1,14 +1,14 @@
 import logging
 from common.config import Configuration
-from common.vpc import Vpc, Vpcs
-from common.subnet import Subnet
-from common.security_group import SecurityGroup
-from common.route_table import RouteTable
-from common.internet_gateway import InternetGateway, InternetGateways
-from common.vpc_address import VpcAddress, VpcAddresses
-from common.nat_gateway import NatGateway, NatGateways
-from common.key_pair import KeyPair, KeyPairs
-from common.instance import Instance
+from common.ec2.vpc import Vpc, Vpcs
+from common.ec2.subnet import Subnet
+from common.ec2.security_group import SecurityGroup
+from common.ec2.route_table import RouteTable
+from common.ec2.internet_gateway import InternetGateway, InternetGateways
+from common.ec2.vpc_address import VpcAddress, VpcAddresses
+from common.ec2.nat_gateway import NatGateway, NatGateways
+from common.ec2.key_pair import KeyPair, KeyPairs
+from common.ec2.instance import Instance
 
 class CreateAWSResources():
     def _getVpc() -> Vpc:

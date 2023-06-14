@@ -11,11 +11,11 @@ class Configuration:
     _setup_already = False
     _parser = None
 
-    def reloadconfig(): 
+    def reloadconfig(config_file_name: str = 'config.ini'): 
         Configuration._config = configparser.ConfigParser(inline_comment_prefixes="#;")
-        Configuration._config.read(filenames='config.ini')
+        Configuration._config.read(filenames=config_file_name)
 
-    def getArgParser(project_description: str) -> argparse.ArgumentParser:
+    def getArgParser(project_description: str, config_file_name: str = 'config.ini') -> argparse.ArgumentParser:
         if Configuration._parser != None: return Configuration._parser
 
         Configuration._parser = argparse.ArgumentParser(
@@ -23,26 +23,26 @@ class Configuration:
             epilog="NOTE: these default values are specified in 'config.ini'", 
             formatter_class=argparse.ArgumentDefaultsHelpFormatter
         )
-        Configuration.reloadconfig()
+        Configuration.reloadconfig(config_file_name)
         default_profile_name    = Configuration._config.get('AWSCli', 'default.profile.name')
         default_region_name     = Configuration._config.get('AWSCli','default.region.name')
         Configuration._parser.add_argument('--profile-name', '-pn', help=f"AWS Config profile to use.", default=default_profile_name, required=False, type=str)
         Configuration._parser.add_argument('--region-name', '-rn', help=f"Region to use.", default=default_region_name, required=False, type=str)
         return Configuration._parser
     
-    def getCmdLineArgs(project_description: str) -> object:
+    def getCmdLineArgs(project_description: str, config_file_name: str = 'config.ini') -> object:
         if Configuration.args: return Configuration.args
 
-        Configuration.getArgParser(project_description=project_description)
+        Configuration.getArgParser(project_description=project_description, config_file_name=config_file_name)
         Configuration._parser.add_argument('--cleanup', '-c', help=f"Find and delete AWS resources created by this script.", action=argparse.BooleanOptionalAction, default=False)
         Configuration.args = Configuration._parser.parse_args()
         return Configuration.args
         
-    def setup(project_name: str, project_description: str):
+    def setup(project_name: str, project_description: str, config_file_name: str = 'config.ini'):
         if Configuration._setup_already: return
         
         Configuration._project_name = project_name
-        Configuration.getCmdLineArgs(project_description)
+        Configuration.getCmdLineArgs(project_description, config_file_name)
 
         Configuration._profile_name = Configuration.args.profile_name
         Configuration._region_name = Configuration.args.region_name

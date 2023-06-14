@@ -1,10 +1,10 @@
 import os
 from common.config import Configuration
-from common.vpc import Vpcs
-from common.internet_gateway import InternetGateways
-from common.vpc_address import VpcAddresses
-from common.nat_gateway import NatGateways
-from common.key_pair import KeyPairs
+from common.ec2.vpc import Vpcs
+from common.ec2.internet_gateway import InternetGateways
+from common.ec2.vpc_address import VpcAddresses
+from common.ec2.nat_gateway import NatGateways
+from common.ec2.key_pair import KeyPairs
 
 class DeleteAWSResources():
     def run(project_name: str):

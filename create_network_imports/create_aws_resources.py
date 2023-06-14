@@ -1,11 +1,11 @@
 import logging, pyperclip
 from common.config import Configuration
-from common.vpc import Vpc, Vpcs
-from common.instance import Instance
-from common.subnet import Subnet
-from common.security_group import SecurityGroup
-from common.internet_gateway import InternetGateways
-from common.key_pair import KeyPairs
+from common.ec2.vpc import Vpc, Vpcs
+from common.ec2.instance import Instance
+from common.ec2.subnet import Subnet
+from common.ec2.security_group import SecurityGroup
+from common.ec2.internet_gateway import InternetGateways
+from common.ec2.key_pair import KeyPairs
 
 class CreateAWSResources():
     def _getVpc() -> Vpc:

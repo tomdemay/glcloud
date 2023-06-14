@@ -1,0 +1,10 @@
+{
+  "ec2": {
+    "image-id": "ami-0715c1897453cabd1",
+    "instance-type": "t2.micro",
+    "mincount": "1",
+    "maxcount": "2",
+    "key-name": "glkey-us-east-1",
+    "security-group": "serversg"
+  }
+}
