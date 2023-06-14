@@ -88,9 +88,10 @@ def createMySQLStack(vpc_id: str, subnet_id: str, private_ip_address: str) -> tu
     )
     instance_id         = stack_outputs['devopsAssessmentMySQLInstance']
     public_ip_address   = stack_outputs['devopsAssessmentMySQLInstancePublicIp']
+    private_ip_address  = stack_outputs['devopsAssessmentMySQLInstancePrivateIp']
     repository_arn      = stack_outputs['devopsAssessmentRepositoryArn']
     repository_uri      = stack_outputs['devopsAssessmentRepositoryUri']
-    return instance_id, public_ip_address, repository_arn, repository_uri
+    return instance_id, public_ip_address, private_ip_address, repository_arn, repository_uri
 
 def createDockerFile(private_ip_address: str) -> None:
     # syntax highlighting might suggest private_ip_address is not being used.
@@ -134,17 +135,18 @@ def tagDockerImage(image: Image, repository_uri: str) -> Image:
     tag_response = image.tag(repository=repository_uri, tag="latest")
     logging.info(f"Tagged image '{image.tags}' ({image.id}) in repository '{repository_uri}' with tag 'latest'. Response '{tag_response}'")
     return image
-    
-def pushDockerImage(repository_uri: str, private_ip_address: str, auth_config: dict = {}) -> None:
+
+def getDockerImage(repository_uri: str, auth_config: dict = {}) -> Image:
+    image = None
     try:
-        logging.info(f"Checking to see if image with private_ip_address '{private_ip_address}' was already pushed to repository '{repository_uri}'")
+        logging.info(f"Pulling '{repository_uri}'....")
         image = dockerClient.images.pull(repository=repository_uri, auth_config=auth_config)
-        if image.labels.get('MYSQL_IP_ADDRESS') == private_ip_address: 
-            logging.info(f"Image with private_ip_address '{private_ip_address}' has already been pushed to repository '{repository_uri}'")
-            return
+        logging.info(f"Pulled '{repository_uri}'")
     except Exception as e:
         logging.info(f"Attempting to pull image from '{repository_uri}' threw an exception: {str(e)}")
+    return image
 
+def pushDockerImage(repository_uri: str, private_ip_address: str, auth_config: dict = {}) -> None:
     logging.info(f"Pushing image repository '{repository_uri}' with tag 'latest' (this might take a few minutes)...")
     if len(auth_config): 
         push_response = dockerClient.images.push(repository=repository_uri, tag='latest', auth_config=auth_config, decode=True).replace('\r', '')
@@ -177,14 +179,11 @@ def dockerLoginToECR() -> dict:
     }
 
 def createAndPushDockerImage(repository_uri: str, private_ip_address: str) -> Image:
-    image = createDockerImage(private_ip_address=private_ip_address)
-    image = tagDockerImage(image=image, repository_uri=repository_uri)
-
-    try:
-        pushDockerImage(repository_uri=repository_uri, private_ip_address=private_ip_address)
-    except Exception as e:
-        logging.error(f"Pushing image to repository failed: {str(e)}")
-        auth_config = dockerLoginToECR()
+    auth_config = dockerLoginToECR()
+    image = getDockerImage(repository_uri=repository_uri, auth_config=auth_config)
+    if image.labels.get('MYSQL_IP_ADDRESS') != private_ip_address:
+        image = createDockerImage(private_ip_address=private_ip_address)
+        image = tagDockerImage(image=image, repository_uri=repository_uri)
         pushDockerImage(repository_uri=repository_uri, private_ip_address=private_ip_address, auth_config=auth_config)
     return image
 
@@ -210,7 +209,7 @@ def createServiceStack(vpc_id: str, subnet_ids: str) -> str:
 def setup():
     logging.info("Setting up...")
     vpc_id, subnet_ids, subnet_id, private_ip_address = getSetupProps()
-    instance_id, public_ip_address, repository_arn, repository_uri = \
+    instance_id, public_ip_address, private_ip_address, repository_arn, repository_uri = \
         createMySQLStack(vpc_id=vpc_id, subnet_id=subnet_id, private_ip_address=private_ip_address)
     pyperclip.copy(public_ip_address)
     logging.info(f'''
