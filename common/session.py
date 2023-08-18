@@ -8,6 +8,7 @@ class Session:
     _ecr_client     = None
     _ecs_client     = None
     _elbv2_client   = None
+    _s3_resource    = None
 
     def connect(profile_name: str, region_name: str):
         if Session._aws_session: return
@@ -60,3 +61,10 @@ class Session:
         if cls._elbv2_client == None:
             cls._elbv2_client     = cls.aws_session.client('elbv2')
         return cls._elbv2_client
+
+    @classproperty
+    def s3_resource(cls: object) -> object:
+        if cls._s3_resource == None:
+            cls._s3_resource    = cls.aws_session.resource('s3')
+        return cls._s3_resource
+    

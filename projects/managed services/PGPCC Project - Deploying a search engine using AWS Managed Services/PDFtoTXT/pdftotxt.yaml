@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: 'AWS::Serverless-2016-10-31'
+Description: >-
+  Defining the PDF To Text Lambda function and the S3 buckets for the PDF
+  documents and the text files
+Resources:
+  glPdfSearchPdfToTxtLambda:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: gl-pdf-search-pdf-to-txt-lambda
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.7
+      Description: ''
+      CodeUri: .
+      MemorySize: 512
+      Timeout: 900
+      Role: 'arn:aws:iam::032822161467:role/lambda-multirole'
+      Environment:
+        Variables:
+          TARGET_BUCKET: gl-pdf-search-inter-store-bucket
+      Layers:
+        - 'arn:aws:lambda:us-east-1:032822161467:layer:pdf-search-aws-auth:1'
+        - 'arn:aws:lambda:us-east-1:032822161467:layer:pdf-search-appbase:1'
+      VpcConfig:
+        SecurityGroupIds:
+          - 'sg-0ac3ef597cdb9b3a6'
+          - 'sg-e7437fb3'
+        SubnetIds:
+          - 'subnet-a8eef986'
+          - 'subnet-740dd539'
+          - 'subnet-13f4e14f'
+  glPdfSearchDocumentStoreBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: gl-pdf-search-document-store-bucket
+      # The following NotificationConfiguration is used to trigger the 
+      # lambda function. But it cannot be used when the stack is created 
+      # for the first time. After the stack is created, the following 
+      # NotificationConfiguration can be added and the stack can be 
+      # updated. This will trigger the Lambda function when a new PDF 
+      # document is uploaded to the bucket
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Function: !GetAtt glPdfSearchPdfToTxtLambda.Arn
+  glPdfSearchDocumentStoreEventPdfToText:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !Ref glPdfSearchPdfToTxtLambda
+      Action: 'lambda:invokeFunction'
+      Principal: s3.amazonaws.com
+      SourceArn: !GetAtt glPdfSearchDocumentStoreBucket.Arn

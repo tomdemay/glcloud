@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: An AWS Serverless Specification template describing your function.
+Resources:
+  searchgateway:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: gl-pdf-search-search-function-lambda
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.9
+      CodeUri: .
+      Description: ''
+      MemorySize: 128
+      Timeout: 300
+      Role: 'arn:aws:iam::032822161467:role/lambda-multirole'
+      Layers:
+        - 'arn:aws:lambda:us-east-1:032822161467:layer:pdf-search-aws-auth:1'
+      VpcConfig:
+        SecurityGroupIds:
+          - 'sg-0ac3ef597cdb9b3a6'
+          - 'sg-e7437fb3'
+        SubnetIds:
+          - 'subnet-a8eef986'
+          - 'subnet-740dd539'
+          - 'subnet-13f4e14f'

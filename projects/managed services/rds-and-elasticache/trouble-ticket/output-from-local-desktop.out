@@ -1,0 +1,52 @@
+PS C:\Users\demay\OneDrive\Desktop\courses\gl-cloud> python.exe '.\projects\managed services\rds_advanced.py'
+
+
+Using mysql.connector
+---------------------
+Employee (1): Leslie, Andrews - leslie@luv2code.com
+Employee (2): Emma, Baumgarten - emma@luv2code.com
+Employee (3): Avani, Gupta - avani@luv2code.com
+Employee (4): Yuri, Petrov - yuri@luv2code.com
+Employee (5): Juan, Vega - juan@luv2code.com
+
+Getting the employee 1
+Traceback (most recent call last):
+  File "C:\Python311\Lib\site-packages\redis\connection.py", line 699, in connect
+    sock = self.retry.call_with_retry(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\site-packages\redis\retry.py", line 51, in call_with_retry
+    raise error
+  File "C:\Python311\Lib\site-packages\redis\retry.py", line 46, in call_with_retry
+    return do()
+           ^^^^
+  File "C:\Python311\Lib\site-packages\redis\connection.py", line 700, in <lambda>
+    lambda: self._connect(), lambda error: self.disconnect(error)
+            ^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\site-packages\redis\connection.py", line 1002, in _connect
+    raise err
+  File "C:\Python311\Lib\site-packages\redis\connection.py", line 990, in _connect
+    sock.connect(socket_address)
+TimeoutError: [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\demay\OneDrive\Desktop\courses\gl-cloud\projects\managed services\rds_advanced.py", line 66, in <module>
+    main()
+  File "C:\Users\demay\OneDrive\Desktop\courses\gl-cloud\projects\managed services\rds_advanced.py", line 64, in main
+    getEmployee(1)
+  File "C:\Users\demay\OneDrive\Desktop\courses\gl-cloud\projects\managed services\rds_advanced.py", line 41, in getEmployee
+    red_obj = red.get(id)
+              ^^^^^^^^^^^
+  File "C:\Python311\Lib\site-packages\redis\commands\core.py", line 1801, in get
+    return self.execute_command("GET", name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\site-packages\redis\client.py", line 1266, in execute_command
+    conn = self.connection or pool.get_connection(command_name, **options)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\site-packages\redis\connection.py", line 1457, in get_connection
+    connection.connect()
+  File "C:\Python311\Lib\site-packages\redis\connection.py", line 703, in connect
+    raise TimeoutError("Timeout connecting to server")
+redis.exceptions.TimeoutError: Timeout connecting to server
+PS C:\Users\demay\OneDrive\Desktop\courses\gl-cloud>

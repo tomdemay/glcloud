@@ -1,0 +1,13 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      python: 3.10
+  build:
+    commands:
+      - aws cloudformation package --template-file upload-to-search.yaml --s3-bucket gl-pdf-search-artifacts-bucket --output-template-file upload.yaml
+
+artifacts:
+  type: zip
+  files:
+    - upload.yaml
